@@ -97,25 +97,49 @@ def set_mode(mode: str) -> dict:
 # ---------------------------------------------------------------------- #
 # gated actuation — OFF unless started with --enable-actuation
 # ---------------------------------------------------------------------- #
+_RESULT_NAMES = {
+    0: "ACCEPTED",
+    1: "TEMPORARILY_REJECTED",
+    2: "DENIED",
+    3: "UNSUPPORTED",
+    4: "FAILED",
+    5: "IN_PROGRESS",
+}
+
+
+def _arm_result(conn, value: int) -> dict:
+    result = conn.arm() if value else conn.disarm()
+    accepted = result == 0
+    out = {
+        "command": "arm" if value else "disarm",
+        "accepted": accepted,
+        "result_code": result,
+        "result": _RESULT_NAMES.get(result, "NO_ACK" if result is None else str(result)),
+    }
+    if not accepted:
+        # The vehicle refused (or didn't ack). Surface the prearm reason.
+        out["recent_statustext"] = conn.recent_statustext(5)
+    return out
+
+
 @mcp.tool()
 def arm() -> dict:
-    """ARM the vehicle. Gated: requires --enable-actuation, and on a real link
-    also --allow-real-vehicle. Can move hardware."""
+    """ARM the vehicle, confirmed via COMMAND_ACK. Gated: requires
+    --enable-actuation, and on a real link also --allow-real-vehicle. If the
+    vehicle refuses, the prearm STATUSTEXT is returned so you can diagnose it."""
     try:
-        _require_conn().arm()
-        return {"armed": True}
+        return _arm_result(_require_conn(), 1)
     except ActuationDenied as e:
-        return {"armed": False, "denied": str(e)}
+        return {"command": "arm", "accepted": False, "denied": str(e)}
 
 
 @mcp.tool()
 def disarm() -> dict:
-    """DISARM the vehicle. Same gating as arm()."""
+    """DISARM the vehicle, confirmed via COMMAND_ACK. Same gating as arm()."""
     try:
-        _require_conn().disarm()
-        return {"armed": False}
+        return _arm_result(_require_conn(), 0)
     except ActuationDenied as e:
-        return {"denied": str(e)}
+        return {"command": "disarm", "accepted": False, "denied": str(e)}
 
 
 # ---------------------------------------------------------------------- #

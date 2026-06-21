@@ -68,11 +68,19 @@ class FakeMaster:
     def set_mode(self, mode_id):
         self.sent.append(("mode", mode_id))
 
-    def arducopter_arm(self):
-        self.sent.append(("arm",))
+    def request_data_stream_send(self, ts, tc, stream_id, rate, start):
+        self.sent.append(("stream", rate, start))
 
-    def arducopter_disarm(self):
-        self.sent.append(("disarm",))
+    def command_long_send(self, ts, tc, command, confirmation, p1, *rest):
+        # Arm/disarm command (400). param1: 1 arm, 0 disarm. Echo a COMMAND_ACK.
+        if command == 400:
+            self.sent.append(("arm" if p1 == 1 else "disarm",))
+            self.feed(FakeMsg("COMMAND_ACK", command=400, result=self.next_ack_result))
+        else:
+            self.sent.append(("cmd", command))
+
+    # result the simulated vehicle returns for the next arm/disarm (0 == ACCEPTED)
+    next_ack_result = 0
 
     def close(self):
         self.closed = True
@@ -137,13 +145,37 @@ def test_arm_denied_by_default(conn):
     assert ("arm",) not in conn.master.sent
 
 
-def test_arm_allowed_when_actuation_enabled_on_local():
+def test_arm_allowed_when_actuation_enabled_returns_accepted():
     master = FakeMaster()
     c = MavlinkConnection("udp:127.0.0.1:14550", master=master, actuation_enabled=True)
     c.start()
     try:
-        c.arm()
+        result = c.arm(timeout=2.0)
+        assert result == 0  # MAV_RESULT_ACCEPTED
         assert ("arm",) in master.sent
+    finally:
+        c.stop()
+
+
+def test_arm_reports_rejection_from_command_ack():
+    master = FakeMaster()
+    master.next_ack_result = 4  # MAV_RESULT_FAILED (e.g. prearm refused)
+    c = MavlinkConnection("udp:127.0.0.1:14550", master=master, actuation_enabled=True)
+    c.start()
+    try:
+        result = c.arm(timeout=2.0)
+        assert result == 4  # the tool must surface the refusal, not claim success
+    finally:
+        c.stop()
+
+
+def test_disarm_confirmed_via_ack():
+    master = FakeMaster()
+    c = MavlinkConnection("udp:127.0.0.1:14550", master=master, actuation_enabled=True)
+    c.start()
+    try:
+        assert c.disarm(timeout=2.0) == 0
+        assert ("disarm",) in master.sent
     finally:
         c.stop()
 
@@ -157,6 +189,10 @@ def test_arm_denied_on_real_link_without_real_flag():
             c.arm()
     finally:
         c.stop()
+
+
+def test_start_requests_data_streams(conn):
+    assert any(s[0] == "stream" for s in conn.master.sent)
 
 
 def test_stop_closes_master(conn):

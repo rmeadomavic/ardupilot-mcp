@@ -40,12 +40,14 @@ class MavlinkConnection:
         actuation_enabled: bool = False,
         allow_real_vehicle: bool = False,
         recv_timeout: float = 0.5,
+        stream_rate_hz: int = 4,
     ) -> None:
         self.conn_str = conn_str
         self.link_kind = classify_link(conn_str)
         self._injected_master = master
         self._source_system = source_system
         self._recv_timeout = recv_timeout
+        self._stream_rate_hz = stream_rate_hz
 
         self.master: Any | None = master
         self.cache = MessageCache()
@@ -57,6 +59,10 @@ class MavlinkConnection:
 
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+
+        # COMMAND_ACK correlation: command id -> result code.
+        self._ack_cond = threading.Condition()
+        self._acks: dict[int, int] = {}
 
     # ------------------------------------------------------------------ #
     # lifecycle
@@ -72,6 +78,28 @@ class MavlinkConnection:
         self._stop.clear()
         self._thread = threading.Thread(target=self._recv_loop, daemon=True)
         self._thread.start()
+        self._request_streams()
+
+    def _request_streams(self) -> None:
+        """Ask the vehicle to stream telemetry.
+
+        ArduPilot will not necessarily push ATTITUDE/GLOBAL_POSITION_INT/
+        SYS_STATUS to a freshly connected link, which would leave the cache
+        (and vehicle_state) empty. REQUEST_DATA_STREAM is deprecated but still
+        honored by ArduPilot and is the most compatible nudge.
+        """
+        try:
+            from pymavlink import mavutil
+
+            self.master.mav.request_data_stream_send(
+                self.master.target_system,
+                self.master.target_component,
+                mavutil.mavlink.MAV_DATA_STREAM_ALL,
+                self._stream_rate_hz,
+                1,
+            )
+        except Exception:
+            pass
 
     def stop(self) -> None:
         self._stop.set()
@@ -95,7 +123,20 @@ class MavlinkConnection:
             msg_type = msg.get_type()
             if msg_type == "PARAM_VALUE":
                 self.params.apply(msg)
+            elif msg_type == "COMMAND_ACK":
+                self._record_ack(msg)
             self.cache.update(msg)
+
+    def _record_ack(self, msg: Any) -> None:
+        with self._ack_cond:
+            self._acks[int(msg.command)] = int(msg.result)
+            self._ack_cond.notify_all()
+
+    def _wait_ack(self, command: int, timeout: float) -> int | None:
+        """Block for the COMMAND_ACK result of ``command``, or None on timeout."""
+        with self._ack_cond:
+            ok = self._ack_cond.wait_for(lambda: command in self._acks, timeout=timeout)
+            return self._acks.get(command) if ok else None
 
     # ------------------------------------------------------------------ #
     # read tools
@@ -205,10 +246,37 @@ class MavlinkConnection:
     # ------------------------------------------------------------------ #
     # gated actuation
     # ------------------------------------------------------------------ #
-    def arm(self) -> None:
-        self.gate.check(self.link_kind)
-        self.master.arducopter_arm()
+    def arm(self, timeout: float = 3.0) -> int | None:
+        """ARM via MAV_CMD_COMPONENT_ARM_DISARM, confirmed by COMMAND_ACK.
 
-    def disarm(self) -> None:
+        Returns the MAV_RESULT code (0 == ACCEPTED) or None if no ack arrived.
+        A non-zero/None result means the vehicle did NOT arm — check
+        recent_statustext() for the prearm reason.
+        """
+        return self._arm_disarm(1, timeout)
+
+    def disarm(self, timeout: float = 3.0) -> int | None:
+        """DISARM, confirmed by COMMAND_ACK. Returns MAV_RESULT (0 == ACCEPTED)."""
+        return self._arm_disarm(0, timeout)
+
+    def _arm_disarm(self, value: int, timeout: float) -> int | None:
         self.gate.check(self.link_kind)
-        self.master.arducopter_disarm()
+        from pymavlink import mavutil
+
+        cmd = mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM
+        with self._ack_cond:
+            self._acks.pop(cmd, None)  # drop any stale ack before sending
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            cmd,
+            0,  # confirmation
+            value,  # param1: 1 arm, 0 disarm
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        return self._wait_ack(cmd, timeout)
