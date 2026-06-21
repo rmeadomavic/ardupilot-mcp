@@ -9,7 +9,8 @@
 ## Testing
 
 <!-- How was this verified? -->
-- [ ] Local tests pass (`pytest` or `npm test`)
+- [ ] Local tests pass (`pytest`)
+- [ ] SITL re-validated if the MAVLink/connection path changed (`python scripts/sitl_check.py`)
 - [ ] CI passes
 - [ ] Manual smoke test (describe steps if applicable)
 

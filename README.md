@@ -1,107 +1,135 @@
-# mavlink-mcp
+# ardupilot-mcp
 
-An [MCP](https://modelcontextprotocol.io) server that lets an agent talk to an
-**ArduPilot** vehicle over **MAVLink** — read state, inspect/change parameters,
-switch modes, and (gated, opt-in) arm/disarm.
+An [MCP](https://modelcontextprotocol.io) server that lets an AI agent talk to an ArduPilot vehicle over MAVLink. Read state, inspect and change parameters, switch modes, read prearm failures, and (gated) arm or disarm. SITL-first.
 
-**SITL-first.** The default target is ArduPilot SITL on loopback. Actuation is
-**off by default** and refuses to touch a real vehicle unless you explicitly say
-so. An agent should never arm hardware by accident.
+`mcp-name: io.github.rmeadomavic/ardupilot-mcp`
 
-> Status: v1 — read + param + mode + gated actuation against SITL. Mission
-> upload/download and guided flight (takeoff/goto/land) are deferred to v2.
+![CI](https://github.com/rmeadomavic/ardupilot-mcp/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![MCP](https://img.shields.io/badge/MCP-server-2d3a2e)
+
+> [!WARNING]
+> **This tool can ARM and command a real aircraft.** A bad command can spin props or fly a vehicle away. Defaults are built to stop that: actuation is OFF unless you pass `--enable-actuation`, and even then it refuses a real (non-loopback) link unless you also pass `--allow-real-vehicle`. Develop against SITL. On hardware, bench-test with **props off** first. No warranty — you own the outcome.
 
 ## Why
 
-There's no maintained MAVLink/ArduPilot MCP server. The killer demo: connect an
-agent to a vehicle, have it read params + prearm `STATUSTEXT`, and **diagnose a
-no-arm** — a real field-instructor tool.
+There's no maintained MAVLink/ArduPilot MCP server. The useful case: point an agent at a vehicle that won't arm, have it read the params and the prearm `STATUSTEXT`, and tell you *why* — instead of you squinting at a GCS message log. The arm tool reports the real `COMMAND_ACK` result and hands back the prearm reasons on refusal; it never force-arms.
 
-## Install
+## Architecture
 
-```bash
-git clone <repo> mavlink-mcp && cd mavlink-mcp
-uv venv --python 3.12
-uv pip install -e ".[dev]"      # or: pip install -e .
+```
+  agent (MCP client)                    ardupilot-mcp                     vehicle
+ ┌──────────────────┐   JSON-RPC    ┌──────────────────────┐   MAVLink   ┌──────────┐
+ │ Claude / etc.    │ ───stdio────▶ │  FastMCP tools       │ ──udp/tcp/  │ ArduPilot│
+ │                  │ ◀───────────  │   │                  │   serial──▶ │  (SITL   │
+ └──────────────────┘               │   ▼                  │ ◀────────── │  or FC)  │
+                                    │  recv thread (1 reader)            └──────────┘
+                                    │   ├─▶ message cache (latest/type)
+                                    │   ├─▶ param store (request/collect)
+                                    │   └─▶ COMMAND_ACK + STATUSTEXT
+                                    └──────────────────────┘
 ```
 
-## Quickstart against SITL
+MAVLink is an async stream; MCP tools are synchronous. One background thread owns the link and is the only reader — it caches the latest message of each type and routes `PARAM_VALUE` into a param store. Tool calls read from those caches (params block until the data arrives). No two threads ever call `recv_match`.
 
-Start ArduPilot SITL (Linux / WSL / a companion box) and have it output to your
-machine:
+## What it does
+
+- **Reads vehicle state from cache, instantly.** Mode, armed, GPS fix and sats, battery, attitude, position — served from cached telemetry, no blocking on the link.
+- **Diagnoses a no-arm.** `ardupilot_arm` returns the `COMMAND_ACK` result and, on refusal, the prearm `STATUSTEXT` (e.g. `AHRS: waiting for home`, `Accels inconsistent`). Safety checks are respected — no `ARMING_CHECK=0`, no force-arm magic number.
+- **Gets and sets parameters** on the real param table, with `set` confirmed by the echoed `PARAM_VALUE`.
+- **Switches flight modes** by name, mapped per vehicle type (Copter/Rover/Plane/Sub) — not hardcoded numbers.
+
+## Quick start (SITL)
+
+You need an ArduPilot SITL instance. From an `ardupilot` checkout:
 
 ```bash
-# in the ardupilot checkout
-sim_vehicle.py -v ArduCopter --out=udp:127.0.0.1:14550 --console
+# starts ArduCopter SITL; serves MAVLink on tcp:127.0.0.1:5760
+sim_vehicle.py -v ArduCopter --console
 ```
 
-Run the MCP server (defaults to `udp:127.0.0.1:14550`):
+Install and run the server (read-only by default):
 
 ```bash
-mavlink-mcp                       # read-only, SITL
-mavlink-mcp --enable-actuation    # allow arm/disarm on SITL
+pipx install ardupilot-mcp          # or: uv tool install ardupilot-mcp
+ardupilot-mcp --connect tcp:127.0.0.1:5760
 ```
 
-> Native Windows can't easily run `sim_vehicle.py`. Run SITL on a Linux box (or
-> a Jetson) and point `--connect` at its IP, or use a prebuilt SITL binary.
+To allow arming against SITL, add `--enable-actuation`. (Not yet on PyPI — until then, `pipx install git+https://github.com/rmeadomavic/ardupilot-mcp`.)
 
-## Register with an MCP client
+## Use with an MCP client
 
-```jsonc
+Claude Code:
+
+```bash
+claude mcp add ardupilot -- ardupilot-mcp --connect tcp:127.0.0.1:5760
+```
+
+Claude Desktop / any `mcpServers` config:
+
+```json
 {
   "mcpServers": {
-    "mavlink": {
-      "command": "mavlink-mcp",
-      "args": ["--connect", "udp:127.0.0.1:14550"]
+    "ardupilot": {
+      "command": "ardupilot-mcp",
+      "args": ["--connect", "tcp:127.0.0.1:5760"]
     }
   }
 }
 ```
 
+Connection strings are pymavlink syntax: `tcp:127.0.0.1:5760` (SITL), `udp:127.0.0.1:14550`, `serial:/dev/ttyACM0:115200`.
+
 ## Tools
 
-| Tool | What it does |
-| --- | --- |
-| `connect(conn_str)` | Connect to a vehicle. `udp:`, `tcp:`, `serial:`. Default SITL. |
-| `vehicle_state()` | Mode, armed, GPS fix/sats, battery, attitude, position — from cache, instant. |
-| `recent_statustext(n)` | Last n STATUSTEXT/prearm messages. The no-arm diagnostic goldmine. |
-| `get_param(name)` | Read one parameter. |
-| `set_param(name, value)` | Set a parameter, confirmed via echoed `PARAM_VALUE`. |
-| `list_params(glob)` | List params, optional glob (`ATC_RAT_*`). |
-| `set_mode(mode)` | Set flight mode by name (`GUIDED`, `RTL`, ...). |
-| `arm()` / `disarm()` | **Gated.** Off unless `--enable-actuation`; real links also need `--allow-real-vehicle`. |
+| Tool | Kind | What it does |
+| --- | --- | --- |
+| `ardupilot_connect` | — | Connect to a vehicle. Default is local SITL. |
+| `ardupilot_vehicle_state` | read | Mode, armed, GPS, battery, attitude, position — from cache. |
+| `ardupilot_recent_statustext` | read | Recent STATUSTEXT/prearm messages. Read this to see why arming failed. |
+| `ardupilot_get_param` | read | Read one parameter. |
+| `ardupilot_set_param` | write | Set a parameter, confirmed via echoed `PARAM_VALUE`. |
+| `ardupilot_list_params` | read | List params, optional glob (`ATC_RAT_*`). |
+| `ardupilot_set_mode` | write | Set flight mode by name. |
+| `ardupilot_arm` / `ardupilot_disarm` | write | Gated. Confirmed via `COMMAND_ACK`. |
 
-Live telemetry is also exposed as the resource `mavlink://telemetry`.
+Write tools are gated and carry the MCP `destructiveHint`. Live telemetry is also exposed as the resource `ardupilot://telemetry`.
+
+## Supported vehicles
+
+| Vehicle | Firmware | Status |
+| --- | --- | --- |
+| ArduCopter | 4.5 | ✓ validated on SITL |
+| ArduRover (UGV/USV) | 4.x | ~ mode map present, not yet validated |
+| ArduPlane | 4.x | ~ mode map present, not yet validated |
+| ArduSub | 4.x | ~ untested |
+
+MAVLink2 is assumed. Not flown on hardware — SITL only so far.
 
 ## Safety model
 
-1. Actuation tools are **off by default**. Enable with `--enable-actuation`.
-2. Even enabled, actuation on a **real** (non-loopback / serial) link is refused
-   unless `--allow-real-vehicle` is also set.
-3. Link classification fails safe: anything not clearly loopback is treated as a
-   real vehicle.
+1. Actuation tools are OFF by default. Enable with `--enable-actuation`.
+2. Even enabled, actuation on a real (non-loopback/serial) link is refused unless `--allow-real-vehicle` is also set.
+3. Link classification fails safe: anything not clearly loopback is treated as a real vehicle.
+4. Arming respects the vehicle's safety checks. There is no force-arm option and no tool to disable `ARMING_CHECK`.
 
-## Architecture
+## Status
 
-MAVLink is an async stream; MCP tools are synchronous. A background thread owns
-the link and is the only reader — it caches the latest message of each type and
-routes `PARAM_VALUE` into a param store. Tool calls read from those caches (and,
-for params, block until the requested data arrives). No two threads ever call
-`recv_match`.
+Working: read, param, mode, and gated arm/disarm against ArduCopter SITL. Validated three ways — unit tests (Python 3.10–3.12), a real-MAVLink-wire check (`scripts/wire_check.py`), and a live ArduPilot SITL run (`scripts/sitl_check.py`).
 
-- `cache.py` — thread-safe latest-of-type + STATUSTEXT ring buffer
-- `params.py` — request-then-collect param accumulator
-- `safety.py` — link classifier + actuation gate
-- `connection.py` — background recv thread tying it together
-- `server.py` — FastMCP tool wiring + CLI
+Open targets: validate Rover/Plane/Sub; mission upload/download and guided flight (takeoff/goto/land) are deferred — mission protocol is a stateful handshake and guided commands are fly-away risk. See [ROADMAP.md](ROADMAP.md).
 
 ## Develop
 
 ```bash
+git clone https://github.com/rmeadomavic/ardupilot-mcp && cd ardupilot-mcp
+uv venv && uv pip install -e ".[dev]"
 pytest -q
 ruff check . && ruff format --check .
+python scripts/wire_check.py            # offline real-wire check, no SITL needed
 ```
 
 ## License
 
-Apache-2.0.
+[MIT](LICENSE) — Kyle Adomavicius

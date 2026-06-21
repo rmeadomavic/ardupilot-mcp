@@ -6,10 +6,8 @@ wait_heartbeat + live recv loop + genuine MAVLink (de)serialization).
 
 This validates everything the unit tests stub with a fake master: the actual
 wire, the data-stream nudge, the param request/collect round trip, set-param
-confirmation, STATUSTEXT flow, and arm via COMMAND_ACK.
-
-It does NOT replace ArduPilot SITL — there's no real prearm logic or true param
-table here. It proves the transport and connection-manager are correct.
+confirmation, STATUSTEXT flow, and arm via COMMAND_ACK. For real prearm logic
+and the genuine param table, use scripts/sitl_check.py against ArduPilot SITL.
 
 Run:  python scripts/wire_check.py
 """
@@ -22,7 +20,7 @@ import time
 
 from pymavlink import mavutil
 
-from mavlink_mcp.connection import MavlinkConnection
+from ardupilot_mcp.connection import MavlinkConnection
 
 PORT = 14650  # off the usual 14550 to avoid colliding with a real GCS
 

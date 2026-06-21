@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from mavlink_mcp.safety import ActuationDenied, SafetyGate, classify_link
+from ardupilot_mcp.safety import ActuationDenied, SafetyGate, classify_link
 
 
 @pytest.mark.parametrize(

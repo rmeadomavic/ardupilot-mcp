@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from mavlink_mcp.params import ParamStore
+from ardupilot_mcp.params import ParamStore
 
 from .conftest import FakeMsg
 

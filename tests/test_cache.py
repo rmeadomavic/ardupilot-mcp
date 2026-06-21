@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 
-from mavlink_mcp.cache import MessageCache
+from ardupilot_mcp.cache import MessageCache
 
 from .conftest import FakeMsg
 

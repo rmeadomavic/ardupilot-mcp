@@ -5,8 +5,8 @@ background thread pumps ``recv_match`` into this cache, and read tools return
 from it instantly without blocking on the link.
 
 Single-latest semantics for most types (ATTITUDE, SYS_STATUS, ...); a bounded
-ring buffer for STATUSTEXT, which is a stream of discrete events (the prearm
-diagnostic goldmine).
+ring buffer for STATUSTEXT, which is a stream of discrete events (where prearm
+failures show up).
 """
 
 from __future__ import annotations

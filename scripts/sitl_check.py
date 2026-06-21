@@ -1,4 +1,4 @@
-"""Validate mavlink-mcp against a real ArduPilot SITL instance.
+"""Validate ardupilot-mcp against a real ArduPilot SITL instance.
 
 Unlike wire_check.py (a fake pymavlink vehicle), this drives the live
 MavlinkConnection against a genuine ArduPilot stack: real param table, real
@@ -18,7 +18,7 @@ import json
 import sys
 import time
 
-from mavlink_mcp.connection import MavlinkConnection
+from ardupilot_mcp.connection import MavlinkConnection
 
 
 def main() -> int:

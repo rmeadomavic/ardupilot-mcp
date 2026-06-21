@@ -7,8 +7,8 @@ import time
 
 import pytest
 
-from mavlink_mcp.connection import MavlinkConnection
-from mavlink_mcp.safety import ActuationDenied
+from ardupilot_mcp.connection import MavlinkConnection
+from ardupilot_mcp.safety import ActuationDenied
 
 from .conftest import FakeMsg
 

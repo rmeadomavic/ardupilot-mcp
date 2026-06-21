@@ -1,7 +1,7 @@
 """Actuation safety gate — the non-negotiable layer.
 
-Rules (from the build handover, do not relax):
-1. Actuation tools (arm/disarm, raw command_long) are OFF by default.
+Rules (do not relax):
+1. Actuation tools (arm/disarm, set_param, set_mode) are OFF by default.
 2. Even when enabled, refuse on a *real* (non-loopback / serial) link unless a
    second explicit flag is set.
 
@@ -47,8 +47,8 @@ class SafetyGate:
         """Raise ActuationDenied unless actuation is permitted on this link."""
         if not self.actuation_enabled:
             raise ActuationDenied(
-                "Actuation is disabled. Start the server with actuation enabled "
-                "to allow arm/disarm/command_long."
+                "Actuation is disabled. Start the server with --enable-actuation "
+                "to allow arm/disarm/set_param/set_mode."
             )
         if link_kind == "real" and not self.allow_real_vehicle:
             raise ActuationDenied(

@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # Python deps
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -10,17 +9,6 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
-  # Node deps (only effective if package.json exists)
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "chore(deps)"
-
-  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -28,12 +16,3 @@ updates:
       day: "monday"
     commit-message:
       prefix: "chore(ci)"
-
-  # Cargo (only effective if Cargo.toml exists)
-  - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(deps)"
