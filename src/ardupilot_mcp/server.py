@@ -19,7 +19,7 @@ from mcp.types import ToolAnnotations
 from .connection import MavlinkConnection
 from .safety import ActuationDenied
 
-DEFAULT_CONN = "udp:127.0.0.1:14550"
+DEFAULT_CONN = "tcp:127.0.0.1:5760"  # ArduPilot SITL's native serve port
 
 log = logging.getLogger("ardupilot_mcp")
 

@@ -14,7 +14,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI agent talk to a
 
 ## Why
 
-There's no maintained MAVLink/ArduPilot MCP server. The useful case: point an agent at a vehicle that won't arm, have it read the params and the prearm `STATUSTEXT`, and tell you *why* — instead of you squinting at a GCS message log. The arm tool reports the real `COMMAND_ACK` result and hands back the prearm reasons on refusal; it never force-arms.
+No maintained MAVLink/ArduPilot MCP server exists. The useful case: point an agent at a vehicle that won't arm, have it read the params and the prearm `STATUSTEXT`, and tell you why, instead of you squinting at a GCS message log. The arm tool reports the real `COMMAND_ACK` result and hands back the prearm reasons on refusal; it never force-arms.
 
 ## Architecture
 
