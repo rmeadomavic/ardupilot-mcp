@@ -2,7 +2,9 @@
 
 An [MCP](https://modelcontextprotocol.io) server that lets an AI agent talk to an ArduPilot vehicle over MAVLink. Read state, inspect and change parameters, switch modes, read prearm failures, and (gated) arm or disarm. SITL-first.
 
-`mcp-name: io.github.rmeadomavic/ardupilot-mcp`
+Install: `pipx install ardupilot-mavlink-mcp`
+
+`mcp-name: io.github.rmeadomavic/ardupilot-mavlink-mcp`
 
 ![CI](https://github.com/rmeadomavic/ardupilot-mcp/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -14,7 +16,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI agent talk to a
 
 ## Why
 
-No maintained MAVLink/ArduPilot MCP server exists. The useful case: point an agent at a vehicle that won't arm, have it read the params and the prearm `STATUSTEXT`, and tell you why, instead of you squinting at a GCS message log. The arm tool reports the real `COMMAND_ACK` result and hands back the prearm reasons on refusal; it never force-arms.
+Most ArduPilot tooling for LLMs targets post-flight log analysis. This one drives the **live link**: connect to a running vehicle, read its state and params, change modes, and diagnose why it won't arm — in the moment, not after landing. The useful case: point an agent at a vehicle that won't arm, have it read the params and the prearm `STATUSTEXT`, and tell you why, instead of you squinting at a GCS message log. The arm tool reports the real `COMMAND_ACK` result and hands back the prearm reasons on refusal; it never force-arms.
 
 ## Architecture
 
@@ -52,8 +54,8 @@ sim_vehicle.py -v ArduCopter --console
 Install and run the server (read-only by default):
 
 ```bash
-pipx install ardupilot-mcp          # or: uv tool install ardupilot-mcp
-ardupilot-mcp --connect tcp:127.0.0.1:5760
+pipx install ardupilot-mavlink-mcp          # or: uv tool install ardupilot-mavlink-mcp
+ardupilot-mavlink-mcp --connect tcp:127.0.0.1:5760
 ```
 
 To allow arming against SITL, add `--enable-actuation`. (Not yet on PyPI — until then, `pipx install git+https://github.com/rmeadomavic/ardupilot-mcp`.)
@@ -63,7 +65,7 @@ To allow arming against SITL, add `--enable-actuation`. (Not yet on PyPI — unt
 Claude Code:
 
 ```bash
-claude mcp add ardupilot -- ardupilot-mcp --connect tcp:127.0.0.1:5760
+claude mcp add ardupilot -- ardupilot-mavlink-mcp --connect tcp:127.0.0.1:5760
 ```
 
 Claude Desktop / any `mcpServers` config:
@@ -72,7 +74,7 @@ Claude Desktop / any `mcpServers` config:
 {
   "mcpServers": {
     "ardupilot": {
-      "command": "ardupilot-mcp",
+      "command": "ardupilot-mavlink-mcp",
       "args": ["--connect", "tcp:127.0.0.1:5760"]
     }
   }

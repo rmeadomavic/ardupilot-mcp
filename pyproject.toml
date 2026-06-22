@@ -1,5 +1,5 @@
 [project]
-name = "ardupilot-mcp"
+name = "ardupilot-mavlink-mcp"
 version = "0.1.0"
 description = "MCP server for talking to ArduPilot vehicles over MAVLink. SITL-first, safety-gated."
 readme = "README.md"
@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-ardupilot-mcp = "ardupilot_mcp.server:main"
+ardupilot-mavlink-mcp = "ardupilot_mcp.server:main"
 
 [project.urls]
 Repository = "https://github.com/rmeadomavic/ardupilot-mcp"

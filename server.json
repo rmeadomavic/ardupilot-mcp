@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
-  "name": "io.github.rmeadomavic/ardupilot-mcp",
+  "name": "io.github.rmeadomavic/ardupilot-mavlink-mcp",
   "description": "Talk to an ArduPilot vehicle over MAVLink: read state, params, modes, prearm failures, and gated arm/disarm. SITL-first.",
   "repository": {
     "url": "https://github.com/rmeadomavic/ardupilot-mcp",
@@ -10,7 +10,7 @@
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "ardupilot-mcp",
+      "identifier": "ardupilot-mavlink-mcp",
       "version": "0.1.0",
       "transport": { "type": "stdio" }
     }
