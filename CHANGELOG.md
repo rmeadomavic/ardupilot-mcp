@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-06-22
+
+First release. Published to PyPI (`ardupilot-mavlink-mcp`) and the MCP registry
+(`io.github.rmeadomavic/ardupilot-mavlink-mcp`).
+
 ### Added
 - v1 tool surface against ArduPilot SITL: `ardupilot_connect`,
   `ardupilot_vehicle_state`, `ardupilot_recent_statustext`,
@@ -24,7 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link classification fails safe toward "real". Arming respects vehicle safety
   checks — no force-arm, no `ARMING_CHECK` bypass.
 
-## [0.1.0] - 2026-06-21
-
-### Added
-- Initial scaffold.
+[Unreleased]: https://github.com/rmeadomavic/ardupilot-mcp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/rmeadomavic/ardupilot-mcp/releases/tag/v0.1.0

@@ -58,7 +58,7 @@ pipx install ardupilot-mavlink-mcp          # or: uv tool install ardupilot-mavl
 ardupilot-mavlink-mcp --connect tcp:127.0.0.1:5760
 ```
 
-To allow arming against SITL, add `--enable-actuation`. (Not yet on PyPI — until then, `pipx install git+https://github.com/rmeadomavic/ardupilot-mcp`.)
+To allow arming against SITL, add `--enable-actuation`.
 
 ## Use with an MCP client
 

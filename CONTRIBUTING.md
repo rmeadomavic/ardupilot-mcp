@@ -39,3 +39,27 @@ ruff check . && ruff format --check .
 
 Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`). Keep
 subjects terse and say why the change matters.
+
+## Releasing
+
+Publishing is automated via GitHub Actions OIDC — no tokens are stored. To cut
+a release:
+
+1. Bump the version in `pyproject.toml` and `server.json` (keep them in sync).
+2. Move the `[Unreleased]` notes into a dated section in `CHANGELOG.md`.
+3. Commit, then tag and publish:
+   ```bash
+   gh release create vX.Y.Z --title vX.Y.Z --notes "..."
+   ```
+
+That fires two workflows:
+- `publish.yml` — builds and uploads to PyPI (`ardupilot-mavlink-mcp`) on the
+  GitHub release, via PyPI trusted publishing.
+- `publish-mcp.yml` — publishes `server.json` to the MCP registry on the `v*`
+  tag, via `mcp-publisher login github-oidc`.
+
+Notes:
+- `server.json` `description` must be 100 characters or fewer (registry limit).
+- First-time PyPI setup only: a pending publisher must exist at
+  pypi.org (project `ardupilot-mavlink-mcp`, owner `rmeadomavic`, repo
+  `ardupilot-mcp`, workflow `publish.yml`, environment `pypi`). Already done.
