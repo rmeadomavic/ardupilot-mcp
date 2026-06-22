@@ -48,7 +48,7 @@ Issues = "https://github.com/rmeadomavic/ardupilot-mcp/issues"
 Changelog = "https://github.com/rmeadomavic/ardupilot-mcp/blob/main/CHANGELOG.md"
 
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
