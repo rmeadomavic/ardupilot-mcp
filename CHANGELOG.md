@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-14
+
+### Fixed
+- Removed the stale prerelease install note from the project description that
+  PyPI preserves from the 0.1.0 release metadata.
+- Kept package and MCP registry metadata aligned for the refresh release.
+
 ## [0.1.0] - 2026-06-22
 
 First release. Published to PyPI (`ardupilot-mavlink-mcp`) and the MCP registry
@@ -29,5 +36,6 @@ First release. Published to PyPI (`ardupilot-mavlink-mcp`) and the MCP registry
   link classification fails safe toward "real". Arming respects vehicle safety
   checks — no force-arm, no `ARMING_CHECK` bypass.
 
-[Unreleased]: https://github.com/rmeadomavic/ardupilot-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rmeadomavic/ardupilot-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/rmeadomavic/ardupilot-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rmeadomavic/ardupilot-mcp/releases/tag/v0.1.0
