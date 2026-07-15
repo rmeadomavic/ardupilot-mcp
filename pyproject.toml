@@ -30,7 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.2.0,<2.0",
-    "pymavlink>=2.4.40,<3.0",
+    "pymavlink>=2.4.49,<3.0",
 ]
 
 [project.optional-dependencies]
