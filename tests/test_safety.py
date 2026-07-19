@@ -1,6 +1,6 @@
 """Tests for the actuation safety gate.
 
-The gate is the non-negotiable safety layer from the handover:
+The gate is the repository's non-negotiable safety layer:
 - actuation tools are OFF by default
 - even when enabled, refuse on a real (non-loopback) link unless a second
   explicit flag is set.

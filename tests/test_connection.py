@@ -95,6 +95,16 @@ def conn():
     c.stop()
 
 
+@pytest.fixture
+def conn_act():
+    """Connection with actuation explicitly enabled, for gated-path happy tests."""
+    master = FakeMaster()
+    c = MavlinkConnection("udp:127.0.0.1:14550", master=master, actuation_enabled=True)
+    c.start()
+    yield c
+    c.stop()
+
+
 def test_link_kind_from_conn_str():
     c = MavlinkConnection("serial:COM7:57600", master=FakeMaster())
     assert c.link_kind == "real"
@@ -118,10 +128,32 @@ def test_get_param_requests_and_returns(conn):
     assert ("read", "ATC_RAT_RLL_P") in conn.master.sent
 
 
-def test_set_param_confirms_echo(conn):
-    ok = conn.set_param("WPNAV_SPEED", 750.0, timeout=2.0)
+def test_set_param_confirms_echo(conn_act):
+    ok = conn_act.set_param("WPNAV_SPEED", 750.0, timeout=2.0)
     assert ok is True
-    assert ("set", "WPNAV_SPEED", 750.0) in conn.master.sent
+    assert ("set", "WPNAV_SPEED", 750.0) in conn_act.master.sent
+
+
+def test_set_param_denied_on_real_link_without_real_flag():
+    master = FakeMaster()
+    c = MavlinkConnection("serial:COM7:57600", master=master, actuation_enabled=True)
+    with pytest.raises(ActuationDenied):
+        c.set_param("WPNAV_SPEED", 750.0)
+    assert ("set", "WPNAV_SPEED", 750.0) not in master.sent
+
+
+@pytest.mark.parametrize("conn_str", ["udp:127.0.0.1:14550", "serial:COM7:57600"])
+def test_set_param_rejects_arming_check_on_any_link(conn_str):
+    master = FakeMaster()
+    c = MavlinkConnection(
+        conn_str,
+        master=master,
+        actuation_enabled=True,
+        allow_real_vehicle=True,
+    )
+    with pytest.raises(ActuationDenied, match="ARMING_CHECK"):
+        c.set_param("arming_check", 0)
+    assert not any(sent[0] == "set" for sent in master.sent)
 
 
 def test_list_params_collects_full_table(conn):
@@ -129,14 +161,22 @@ def test_list_params_collects_full_table(conn):
     assert params == {"A": 1.0, "B": 2.0}
 
 
-def test_set_mode_maps_name_to_id(conn):
-    conn.set_mode("GUIDED")
-    assert ("mode", 4) in conn.master.sent
+def test_set_mode_maps_name_to_id(conn_act):
+    conn_act.set_mode("GUIDED")
+    assert ("mode", 4) in conn_act.master.sent
 
 
-def test_set_mode_rejects_unknown(conn):
+def test_set_mode_denied_on_real_link_without_real_flag():
+    master = FakeMaster()
+    c = MavlinkConnection("serial:COM7:57600", master=master, actuation_enabled=True)
+    with pytest.raises(ActuationDenied):
+        c.set_mode("GUIDED")
+    assert ("mode", 4) not in master.sent
+
+
+def test_set_mode_rejects_unknown(conn_act):
     with pytest.raises(ValueError):
-        conn.set_mode("WARP_SPEED")
+        conn_act.set_mode("WARP_SPEED")
 
 
 def test_arm_denied_by_default(conn):

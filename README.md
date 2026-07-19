@@ -7,6 +7,7 @@ Install: `pipx install ardupilot-mavlink-mcp`
 `mcp-name: io.github.rmeadomavic/ardupilot-mavlink-mcp`
 
 ![CI](https://github.com/rmeadomavic/ardupilot-mcp/actions/workflows/ci.yml/badge.svg)
+[![PyPI](https://img.shields.io/pypi/v/ardupilot-mavlink-mcp)](https://pypi.org/project/ardupilot-mavlink-mcp/)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![MCP](https://img.shields.io/badge/MCP-server-2d3a2e)
@@ -58,7 +59,7 @@ pipx install ardupilot-mavlink-mcp          # or: uv tool install ardupilot-mavl
 ardupilot-mavlink-mcp --connect tcp:127.0.0.1:5760
 ```
 
-To allow arming against SITL, add `--enable-actuation`.
+To allow parameter writes, mode changes, and arm/disarm against SITL, add `--enable-actuation`.
 
 ## Use with an MCP client
 
@@ -93,7 +94,7 @@ Connection strings are pymavlink syntax: `tcp:127.0.0.1:5760` (SITL), `udp:127.0
 | `ardupilot_get_param` | read | Read one parameter. |
 | `ardupilot_set_param` | write | Set a parameter, confirmed via echoed `PARAM_VALUE`. |
 | `ardupilot_list_params` | read | List params, optional glob (`ATC_RAT_*`). |
-| `ardupilot_set_mode` | write | Set flight mode by name. |
+| `ardupilot_set_mode` | write | Send a request to set flight mode by name. |
 | `ardupilot_arm` / `ardupilot_disarm` | write | Gated. Confirmed via `COMMAND_ACK`. |
 
 Write tools are gated and carry the MCP `destructiveHint`. Live telemetry is also exposed as the resource `ardupilot://telemetry`.
@@ -112,13 +113,14 @@ MAVLink2 is assumed. Not flown on hardware — SITL only so far.
 ## Safety model
 
 1. Actuation tools are OFF by default. Enable with `--enable-actuation`.
-2. Even enabled, actuation on a real (non-loopback/serial) link is refused unless `--allow-real-vehicle` is also set.
+2. Even enabled, actuation on a real link (serial or non-loopback network) is refused unless `--allow-real-vehicle` is also set.
 3. Link classification fails safe: anything not clearly loopback is treated as a real vehicle.
-4. Arming respects the vehicle's safety checks. There is no force-arm option and no tool to disable `ARMING_CHECK`.
+4. `arm`, `disarm`, `set_param`, and `set_mode` all pass through this gate before sending.
+5. Arming has no force-arm option, and `set_param` rejects `ARMING_CHECK` writes (case-insensitive) on every link, even when both actuation flags are enabled.
 
 ## Status
 
-Working: read, param, mode, and gated arm/disarm against ArduCopter SITL. Validated three ways — unit tests (Python 3.10–3.12), a real-MAVLink-wire check (`scripts/wire_check.py`), and a live ArduPilot SITL run (`scripts/sitl_check.py`).
+Working: reads plus gated parameter writes, mode changes, and arm/disarm against ArduCopter SITL. Validated three ways — unit tests (Python 3.10–3.12), a real-MAVLink-wire check (`scripts/wire_check.py`), and a live ArduPilot SITL run (`scripts/sitl_check.py`).
 
 Open targets: validate Rover/Plane/Sub; mission upload/download and guided flight (takeoff/goto/land) are deferred — mission protocol is a stateful handshake and guided commands are fly-away risk. See [ROADMAP.md](ROADMAP.md).
 

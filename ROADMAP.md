@@ -9,8 +9,6 @@ Priority-bucketed. Subject to change as real use surfaces what matters.
 - Mission download (read waypoints) — read-only, lower risk than upload.
 - `MAV_CMD_SET_MESSAGE_INTERVAL` (511) for telemetry rates, replacing the
   current `REQUEST_DATA_STREAM` nudge.
-- Publish to PyPI so `uvx ardupilot-mavlink-mcp` works without a clone, plus a
-  `server.json` entry in the MCP registry.
 
 ## Medium
 - EKF/GPS/home readiness surfaced in `vehicle_state` (not just an armable bool).

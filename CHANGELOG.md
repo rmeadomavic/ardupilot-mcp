@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-19
+
+### Changed
+- `set_param` and `set_mode` now pass through the actuation safety gate,
+  matching arm/disarm. Previously only arm/disarm were gated; the README
+  overstated the gating and this release makes the claim true.
+- `ardupilot_set_mode` returns `command_sent` instead of `set`, reflecting
+  that the mode change is requested, not confirmed via heartbeat.
+
+### Added
+- `set_param` rejects `ARMING_CHECK` writes (case-insensitive) on every link
+  kind, even with `--enable-actuation` and `--allow-real-vehicle` set.
+- Denial tests covering the gated write paths.
+
 ## [0.1.1] - 2026-07-14
 
 ### Fixed

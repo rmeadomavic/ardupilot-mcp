@@ -14,7 +14,7 @@ from typing import Any
 
 from .cache import MessageCache
 from .params import ParamStore
-from .safety import SafetyGate, classify_link
+from .safety import ActuationDenied, SafetyGate, classify_link
 
 # Message types worth caching as "latest of type" for vehicle_state.
 _CACHE_TYPES = {
@@ -209,6 +209,11 @@ class MavlinkConnection:
         return self.params.wait_for(name, timeout=timeout)
 
     def set_param(self, name: str, value: float, timeout: float = 5.0) -> bool:
+        if name.casefold() == "arming_check".casefold():
+            raise ActuationDenied(
+                "Refusing to write ARMING_CHECK; vehicle safety checks cannot be disabled."
+            )
+        self.gate.check(self.link_kind)
         self.master.param_set_send(name, float(value))
         return self.params.wait_for_value(name, float(value), timeout=timeout)
 
@@ -237,6 +242,7 @@ class MavlinkConnection:
         return str(custom_mode)
 
     def set_mode(self, mode: str) -> None:
+        self.gate.check(self.link_kind)
         mapping = self._mode_map()
         key = mode.upper()
         if key not in mapping:

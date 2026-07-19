@@ -119,14 +119,17 @@ def list_params(glob: str | None = None) -> dict:
 
 @mcp.tool(name="ardupilot_set_mode", annotations=ACTUATING)
 def set_mode(mode: str) -> dict:
-    """Set flight mode by name.
+    """Send a request to set flight mode by name.
+
+    This reports that the command was sent; it does not confirm the resulting
+    mode from a subsequent heartbeat.
 
     Args:
         mode: mode name, e.g. 'GUIDED', 'STABILIZE', 'RTL'. Valid names depend
             on the vehicle type.
     """
     _require_conn().set_mode(mode)
-    return {"mode": mode, "set": True}
+    return {"mode": mode, "command_sent": True}
 
 
 # ---------------------------------------------------------------------- #
